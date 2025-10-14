@@ -1,0 +1,190 @@
+# CloudFormation Template: Alerting Stack
+# File: cloudformation/alerting-stack.yaml
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Infrastructure Monitoring - Alerting and Lambda Functions Stack'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: 'prod'
+    Description: 'Environment name'
+  
+  S3BucketName:
+    Type: String
+    Description: 'S3 bucket containing Lambda deployment packages'
+
+Resources:
+  # Lambda Execution Role
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${Environment}-monitoring-lambda-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: MonitoringLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeInstances
+                  - ec2:RebootInstances
+                  - ec2:CreateTags
+                  - ec2:DescribeTags
+                  - rds:DescribeDBInstances
+                  - rds:ModifyDBInstance
+                  - elbv2:DescribeTargetHealth
+                  - elbv2:DescribeTargetGroups
+                  - elbv2:DeregisterTargets
+                  - elbv2:RegisterTargets
+                  - cloudwatch:GetMetricData
+                  - cloudwatch:PutMetricData
+                  - cloudwatch:PutMetricAlarm
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - sns:Publish
+                  - sns:GetTopicAttributes
+                Resource: '*'
+
+  # Lambda Functions
+  IncidentResponseFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-incident-response'
+      Runtime: python3.9
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref S3BucketName
+        S3Key: lambda/incident-response.zip
+      Timeout: 300
+      MemorySize: 256
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          NOTIFICATION_TOPIC_ARN: !Ref ResponseNotificationTopic
+          ERROR_TOPIC_ARN: !Ref ErrorNotificationTopic
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Function
+          Value: 'IncidentResponse'
+
+  HealthCheckerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-health-checker'
+      Runtime: python3.9
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref S3BucketName
+        S3Key: lambda/health-checker.zip
+      Timeout: 180
+      MemorySize: 256
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Function
+          Value: 'HealthChecker'
+
+  AlertProcessorFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-alert-processor'
+      Runtime: python3.9
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref S3BucketName
+        S3Key: lambda/alert-processor.zip
+      Timeout: 120
+      MemorySize: 256
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Function
+          Value: 'AlertProcessor'
+
+  # SNS Topics for Notifications
+  ResponseNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${Environment}-response-notifications'
+      DisplayName: 'Automated Response Notifications'
+
+  ErrorNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${Environment}-error-notifications'
+      DisplayName: 'System Error Notifications'
+
+  # EventBridge Rules for Scheduled Health Checks
+  HealthCheckScheduleRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub '${Environment}-health-check-schedule'
+      Description: 'Trigger health checker every 5 minutes'
+      ScheduleExpression: 'rate(5 minutes)'
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt HealthCheckerFunction.Arn
+          Id: 'HealthCheckerTarget'
+
+  # Permission for EventBridge to invoke Lambda
+  HealthCheckLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref HealthCheckerFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt HealthCheckScheduleRule.Arn
+
+  # SNS Topic Policy for Lambda invocation
+  IncidentResponseTopicPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref IncidentResponseFunction
+      Action: lambda:InvokeFunction
+      Principal: sns.amazonaws.com
+
+Outputs:
+  IncidentResponseFunctionArn:
+    Description: 'Incident Response Lambda Function ARN'
+    Value: !GetAtt IncidentResponseFunction.Arn
+    Export:
+      Name: !Sub '${Environment}-incident-response-arn'
+
+  HealthCheckerFunctionArn:
+    Description: 'Health Checker Lambda Function ARN'
+    Value: !GetAtt HealthCheckerFunction.Arn
+    Export:
+      Name: !Sub '${Environment}-health-checker-arn'
+
+  AlertProcessorFunctionArn:
+    Description: 'Alert Processor Lambda Function ARN'
+    Value: !GetAtt AlertProcessorFunction.Arn
+    Export:
+      Name: !Sub '${Environment}-alert-processor-arn'
+
+  ResponseNotificationTopicArn:
+    Description: 'Response Notification Topic ARN'
+    Value: !Ref ResponseNotificationTopic
+    Export:
+      Name: !Sub '${Environment}-response-topic-arn'

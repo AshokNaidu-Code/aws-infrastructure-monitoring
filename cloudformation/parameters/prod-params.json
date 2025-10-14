@@ -1,0 +1,17 @@
+# Production Environment Parameters
+# File: cloudformation/parameters/prod-params.json
+
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "prod"
+  },
+  {
+    "ParameterKey": "InstanceType", 
+    "ParameterValue": "t3.medium"
+  },
+  {
+    "ParameterKey": "DBInstanceClass",
+    "ParameterValue": "db.t3.small"
+  }
+]

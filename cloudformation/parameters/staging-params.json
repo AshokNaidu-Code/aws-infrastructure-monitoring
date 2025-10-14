@@ -1,0 +1,17 @@
+# Staging Environment Parameters
+# File: cloudformation/parameters/staging-params.json
+
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "staging"
+  },
+  {
+    "ParameterKey": "InstanceType", 
+    "ParameterValue": "t3.small"
+  },
+  {
+    "ParameterKey": "DBInstanceClass",
+    "ParameterValue": "db.t3.small"
+  }
+]

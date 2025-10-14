@@ -1,0 +1,17 @@
+# Development Environment Parameters
+# File: cloudformation/parameters/dev-params.json
+
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "dev"
+  },
+  {
+    "ParameterKey": "InstanceType", 
+    "ParameterValue": "t3.micro"
+  },
+  {
+    "ParameterKey": "DBInstanceClass",
+    "ParameterValue": "db.t3.micro"
+  }
+]

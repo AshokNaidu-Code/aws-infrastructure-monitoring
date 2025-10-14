@@ -1,0 +1,38 @@
+# Configuration for Incident Response Lambda
+# File: lambda-functions/incident-response/config.json
+
+{
+  "function_name": "incident-response",
+  "description": "Automated incident response handler for infrastructure monitoring",
+  "timeout": 300,
+  "memory_size": 256,
+  "runtime": "python3.9",
+  "environment_variables": {
+    "LOG_LEVEL": "INFO",
+    "NOTIFICATION_ENABLED": "true",
+    "REBOOT_ENABLED": "true",
+    "TAGGING_ENABLED": "true"
+  },
+  "response_actions": {
+    "ec2": {
+      "high_cpu": ["tag_instance", "enable_detailed_monitoring"],
+      "status_check_failed": ["reboot_instance", "notify_admin"]
+    },
+    "rds": {
+      "high_connections": ["log_warning", "recommend_pooling"],
+      "low_storage": ["alert_critical", "recommend_scaling"],
+      "high_cpu": ["enable_enhanced_monitoring"]
+    },
+    "alb": {
+      "unhealthy_targets": ["check_target_health", "log_details"],
+      "high_5xx": ["log_warning", "recommend_investigation"],
+      "high_response_time": ["check_targets", "recommend_scaling"]
+    }
+  },
+  "severity_mapping": {
+    "critical": ["StatusCheck", "UnhealthyTargets", "DatabaseConnections", "SystemHealth"],
+    "high": ["HighCPU", "High5XX", "LowFreeStorage"],
+    "medium": ["HighResponseTime", "HighReadLatency"],
+    "low": ["NetworkUtilization", "DiskUtilization"]
+  }
+}
