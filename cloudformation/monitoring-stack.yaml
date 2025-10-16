@@ -22,9 +22,6 @@ Parameters:
     Type: String
     Description: 'Application Load Balancer ARN'
   
-  DatabaseEndpoint:
-    Type: String
-    Description: 'RDS Database Endpoint'
   
   TargetGroupArn:
     Type: String
