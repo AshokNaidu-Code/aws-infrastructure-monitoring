@@ -1,0 +1,5 @@
+{
+  "widgets": [
+    { "type": "metric", "properties": { "metrics": [["AWS/EC2","CPUUtilization"]], "title": "EC2 CPU Utilization" } }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "function_name": "alert-processor",
+  "description": "Lambda for dynamic threshold calculation",
+  "runtime": "python3.9"
+}

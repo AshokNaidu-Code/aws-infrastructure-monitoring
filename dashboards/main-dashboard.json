@@ -1,0 +1,351 @@
+# Dashboard Configuration for Main Infrastructure Monitoring
+# File: dashboards/main-dashboard.json
+
+{
+  "widgets": [
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 0,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "AWS/EC2", "CPUUtilization", "InstanceId", "i-WEBSERVER1ID", { "label": "Web Server 1 CPU" } ],
+          [ ".", ".", ".", "i-WEBSERVER2ID", { "label": "Web Server 2 CPU" } ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-east-1",
+        "title": "EC2 CPU Utilization",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0,
+            "max": 100
+          }
+        },
+        "annotations": {
+          "horizontal": [
+            {
+              "label": "Critical Threshold",
+              "value": 80,
+              "color": "#d62728"
+            },
+            {
+              "label": "Warning Threshold", 
+              "value": 60,
+              "color": "#ff7f0e"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 0,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "AWS/EC2", "StatusCheckFailed_Instance", "InstanceId", "i-WEBSERVER1ID", { "label": "Web Server 1 Status" } ],
+          [ ".", ".", ".", "i-WEBSERVER2ID", { "label": "Web Server 2 Status" } ],
+          [ ".", "StatusCheckFailed_System", ".", "i-WEBSERVER1ID", { "label": "System Check 1" } ],
+          [ ".", ".", ".", "i-WEBSERVER2ID", { "label": "System Check 2" } ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-east-1",
+        "title": "EC2 Status Checks",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0,
+            "max": 1
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 6,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "prod-monitoring-db", { "label": "RDS CPU %" } ],
+          [ ".", "DatabaseConnections", ".", ".", { "yAxis": "right", "label": "Active Connections" } ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-east-1",
+        "title": "RDS Performance Metrics",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0,
+            "max": 100
+          },
+          "right": {
+            "min": 0
+          }
+        },
+        "annotations": {
+          "horizontal": [
+            {
+              "label": "CPU Critical",
+              "value": 70,
+              "color": "#d62728"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 6,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "AWS/RDS", "FreeStorageSpace", "DBInstanceIdentifier", "prod-monitoring-db", { "label": "Free Storage (Bytes)" } ],
+          [ ".", "FreeableMemory", ".", ".", { "yAxis": "right", "label": "Free Memory (Bytes)" } ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-east-1",
+        "title": "RDS Storage and Memory",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0
+          },
+          "right": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 12,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "AWS/ApplicationELB", "RequestCount", "LoadBalancer", "app/prod-monitoring-alb/LBID", { "stat": "Sum", "label": "Total Requests" } ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-east-1",
+        "title": "ALB Request Volume",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8,
+      "y": 12,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", "app/prod-monitoring-alb/LBID", { "label": "Response Time (seconds)" } ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-east-1",
+        "title": "ALB Response Time",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        },
+        "annotations": {
+          "horizontal": [
+            {
+              "label": "SLA Threshold",
+              "value": 2,
+              "color": "#d62728"
+            },
+            {
+              "label": "Warning",
+              "value": 1.5,
+              "color": "#ff7f0e"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 16,
+      "y": 12,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", "targetgroup/prod-web-targets/TGID", "LoadBalancer", "app/prod-monitoring-alb/LBID", { "label": "Healthy Targets" } ],
+          [ ".", "UnHealthyHostCount", ".", ".", ".", ".", { "label": "Unhealthy Targets" } ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-east-1",
+        "title": "Target Health Status",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 18,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "AWS/ApplicationELB", "HTTPCode_Target_2XX_Count", "LoadBalancer", "app/prod-monitoring-alb/LBID", { "stat": "Sum", "label": "2XX Responses" } ],
+          [ ".", "HTTPCode_Target_4XX_Count", ".", ".", { "stat": "Sum", "label": "4XX Responses" } ],
+          [ ".", "HTTPCode_Target_5XX_Count", ".", ".", { "stat": "Sum", "label": "5XX Responses" } ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-east-1",
+        "title": "HTTP Response Codes",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 18,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "AWS/RDS", "ReadLatency", "DBInstanceIdentifier", "prod-monitoring-db", { "label": "Read Latency" } ],
+          [ ".", "WriteLatency", ".", ".", { "label": "Write Latency" } ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-east-1",
+        "title": "RDS Read/Write Latency",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        },
+        "annotations": {
+          "horizontal": [
+            {
+              "label": "Latency SLA",
+              "value": 0.2,
+              "color": "#d62728"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "number",
+      "x": 0,
+      "y": 24,
+      "width": 6,
+      "height": 3,
+      "properties": {
+        "metrics": [
+          [ "AWS/EC2", "CPUUtilization", "InstanceId", "i-WEBSERVER1ID" ]
+        ],
+        "view": "singleValue",
+        "region": "us-east-1",
+        "title": "Web Server 1 Current CPU %",
+        "period": 300,
+        "stat": "Average"
+      }
+    },
+    {
+      "type": "number",
+      "x": 6,
+      "y": 24,
+      "width": 6,
+      "height": 3,
+      "properties": {
+        "metrics": [
+          [ "AWS/EC2", "CPUUtilization", "InstanceId", "i-WEBSERVER2ID" ]
+        ],
+        "view": "singleValue",
+        "region": "us-east-1",
+        "title": "Web Server 2 Current CPU %",
+        "period": 300,
+        "stat": "Average"
+      }
+    },
+    {
+      "type": "number",
+      "x": 12,
+      "y": 24,
+      "width": 6,
+      "height": 3,
+      "properties": {
+        "metrics": [
+          [ "AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "prod-monitoring-db" ]
+        ],
+        "view": "singleValue",
+        "region": "us-east-1",
+        "title": "Database Current CPU %",
+        "period": 300,
+        "stat": "Average"
+      }
+    },
+    {
+      "type": "number",
+      "x": 18,
+      "y": 24,
+      "width": 6,
+      "height": 3,
+      "properties": {
+        "metrics": [
+          [ "AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", "targetgroup/prod-web-targets/TGID", "LoadBalancer", "app/prod-monitoring-alb/LBID" ]
+        ],
+        "view": "singleValue",
+        "region": "us-east-1",
+        "title": "Healthy Targets",
+        "period": 300,
+        "stat": "Average"
+      }
+    },
+    {
+      "type": "log",
+      "x": 0,
+      "y": 27,
+      "width": 24,
+      "height": 6,
+      "properties": {
+        "query": "SOURCE '/aws/lambda/infrastructure-incident-response'\n| fields @timestamp, @message\n| filter @message like /INCIDENT_LOG/\n| sort @timestamp desc\n| limit 10",
+        "region": "us-east-1",
+        "title": "Recent Incident Response Actions",
+        "view": "table"
+      }
+    }
+  ]
+}

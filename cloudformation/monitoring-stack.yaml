@@ -1,0 +1,411 @@
+# CloudFormation Template: Monitoring Stack
+# File: cloudformation/monitoring-stack.yaml
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Infrastructure Monitoring - CloudWatch Alarms and Dashboards'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: 'prod'
+    Description: 'Environment name'
+  
+  WebServer1Id:
+    Type: String
+    Description: 'Web Server 1 Instance ID'
+  
+  WebServer2Id:
+    Type: String
+    Description: 'Web Server 2 Instance ID'
+  
+  LoadBalancerArn:
+    Type: String
+    Description: 'Application Load Balancer ARN'
+  
+  DatabaseEndpoint:
+    Type: String
+    Description: 'RDS Database Endpoint'
+  
+  TargetGroupArn:
+    Type: String
+    Description: 'Target Group ARN'
+
+Resources:
+  # SNS Topics for Alerts
+  CriticalAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${Environment}-critical-alerts'
+      DisplayName: 'Critical Infrastructure Alerts'
+
+  WarningAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${Environment}-warning-alerts'
+      DisplayName: 'Warning Infrastructure Alerts'
+
+  InfoAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${Environment}-info-alerts'
+      DisplayName: 'Info Infrastructure Alerts'
+
+  # Email Subscription (replace with your email)
+  CriticalEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: email
+      TopicArn: !Ref CriticalAlertsTopic
+      Endpoint: 'your-email@example.com'  # Replace with actual email
+
+  # EC2 CloudWatch Alarms
+  WebServer1HighCPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${Environment}-WebServer1-HighCPU'
+      AlarmDescription: 'Web Server 1 CPU utilization is above 80%'
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref CriticalAlertsTopic
+      OKActions:
+        - !Ref InfoAlertsTopic
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref WebServer1Id
+
+  WebServer2HighCPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${Environment}-WebServer2-HighCPU'
+      AlarmDescription: 'Web Server 2 CPU utilization is above 80%'
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref CriticalAlertsTopic
+      OKActions:
+        - !Ref InfoAlertsTopic
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref WebServer2Id
+
+  WebServer1StatusCheckAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${Environment}-WebServer1-StatusCheck'
+      AlarmDescription: 'Web Server 1 status check failed'
+      MetricName: StatusCheckFailed
+      Namespace: AWS/EC2
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref CriticalAlertsTopic
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref WebServer1Id
+
+  WebServer2StatusCheckAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${Environment}-WebServer2-StatusCheck'
+      AlarmDescription: 'Web Server 2 status check failed'
+      MetricName: StatusCheckFailed
+      Namespace: AWS/EC2
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref CriticalAlertsTopic
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref WebServer2Id
+
+  # ALB CloudWatch Alarms
+  ALBHighResponseTimeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${Environment}-ALB-HighResponseTime'
+      AlarmDescription: 'ALB response time is above 2 seconds'
+      MetricName: TargetResponseTime
+      Namespace: AWS/ApplicationELB
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 2
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref WarningAlertsTopic
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !Select [1, !Split ['/', !Select [1, !Split [':', !Ref LoadBalancerArn]]]]
+
+  ALBHighHTTP5XXAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${Environment}-ALB-High5XX'
+      AlarmDescription: 'ALB 5XX errors are above threshold'
+      MetricName: HTTPCode_Target_5XX_Count
+      Namespace: AWS/ApplicationELB
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 10
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref CriticalAlertsTopic
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !Select [1, !Split ['/', !Select [1, !Split [':', !Ref LoadBalancerArn]]]]
+
+  ALBUnhealthyTargetsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${Environment}-ALB-UnhealthyTargets'
+      AlarmDescription: 'ALB has unhealthy targets'
+      MetricName: UnHealthyHostCount
+      Namespace: AWS/ApplicationELB
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref CriticalAlertsTopic
+      Dimensions:
+        - Name: TargetGroup
+          Value: !Select [1, !Split ['/', !Select [1, !Split [':', !Ref TargetGroupArn]]]]
+        - Name: LoadBalancer
+          Value: !Select [1, !Split ['/', !Select [1, !Split [':', !Ref LoadBalancerArn]]]]
+
+  # RDS CloudWatch Alarms
+  RDSHighCPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${Environment}-RDS-HighCPU'
+      AlarmDescription: 'RDS CPU utilization is above 70%'
+      MetricName: CPUUtilization
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 70
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref WarningAlertsTopic
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Sub '${Environment}-monitoring-db'
+
+  RDSHighConnectionsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${Environment}-RDS-HighConnections'
+      AlarmDescription: 'RDS connection count is above 80% of maximum'
+      MetricName: DatabaseConnections
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 16  # 80% of 20 (default for db.t3.micro)
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref CriticalAlertsTopic
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Sub '${Environment}-monitoring-db'
+
+  RDSLowFreeStorageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${Environment}-RDS-LowFreeStorage'
+      AlarmDescription: 'RDS free storage is below 2GB'
+      MetricName: FreeStorageSpace
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 2000000000  # 2GB in bytes
+      ComparisonOperator: LessThanThreshold
+      AlarmActions:
+        - !Ref WarningAlertsTopic
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Sub '${Environment}-monitoring-db'
+
+  RDSHighReadLatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${Environment}-RDS-HighReadLatency'
+      AlarmDescription: 'RDS read latency is above 200ms'
+      MetricName: ReadLatency
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 0.2  # 200ms
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref WarningAlertsTopic
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Sub '${Environment}-monitoring-db'
+
+  # Custom Composite Alarm for System Health
+  SystemHealthAlarm:
+    Type: AWS::CloudWatch::CompositeAlarm
+    Properties:
+      AlarmName: !Sub '${Environment}-SystemHealth'
+      AlarmDescription: 'Overall system health indicator'
+      AlarmRule: !Sub |
+        ALARM("${WebServer1HighCPUAlarm}") OR 
+        ALARM("${WebServer2HighCPUAlarm}") OR 
+        ALARM("${ALBUnhealthyTargetsAlarm}") OR 
+        ALARM("${RDSHighConnectionsAlarm}")
+      AlarmActions:
+        - !Ref CriticalAlertsTopic
+
+  # CloudWatch Dashboard
+  MonitoringDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub '${Environment}-Infrastructure-Monitoring'
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [ "AWS/EC2", "CPUUtilization", "InstanceId", "${WebServer1Id}" ],
+                  [ ".", ".", ".", "${WebServer2Id}" ]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "${AWS::Region}",
+                "title": "EC2 CPU Utilization",
+                "yAxis": {
+                  "left": {
+                    "min": 0,
+                    "max": 100
+                  }
+                }
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [ "AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "${Environment}-monitoring-db" ],
+                  [ ".", "DatabaseConnections", ".", "." ]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "${AWS::Region}",
+                "title": "RDS Performance",
+                "yAxis": {
+                  "left": {
+                    "min": 0
+                  }
+                }
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 6,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [ "AWS/ApplicationELB", "RequestCount", "LoadBalancer", "app/${Environment}-monitoring-alb" ],
+                  [ ".", "TargetResponseTime", ".", "." ]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "ALB Performance"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 6,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [ "AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", "targetgroup/${Environment}-web-targets", "LoadBalancer", "app/${Environment}-monitoring-alb" ],
+                  [ ".", "UnHealthyHostCount", ".", ".", ".", "." ]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "${AWS::Region}",
+                "title": "Target Health Status"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 12,
+              "width": 24,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [ "AWS/ApplicationELB", "HTTPCode_Target_2XX_Count", "LoadBalancer", "app/${Environment}-monitoring-alb" ],
+                  [ ".", "HTTPCode_Target_4XX_Count", ".", "." ],
+                  [ ".", "HTTPCode_Target_5XX_Count", ".", "." ]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "HTTP Response Codes"
+              }
+            }
+          ]
+        }
+
+Outputs:
+  DashboardURL:
+    Description: 'CloudWatch Dashboard URL'
+    Value: !Sub 'https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=${Environment}-Infrastructure-Monitoring'
+
+  CriticalTopicArn:
+    Description: 'Critical Alerts Topic ARN'
+    Value: !Ref CriticalAlertsTopic
+    Export:
+      Name: !Sub '${Environment}-critical-topic-arn'
+
+  WarningTopicArn:
+    Description: 'Warning Alerts Topic ARN'
+    Value: !Ref WarningAlertsTopic
+    Export:
+      Name: !Sub '${Environment}-warning-topic-arn'
+
+  InfoTopicArn:
+    Description: 'Info Alerts Topic ARN'
+    Value: !Ref InfoAlertsTopic
+    Export:
+      Name: !Sub '${Environment}-info-topic-arn'

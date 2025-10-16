@@ -1,0 +1,6 @@
+{
+  "function_name": "health-checker",
+  "description": "Lambda function for proactive health monitoring",
+  "runtime": "python3.9",
+  "interval": "5min"
+}
