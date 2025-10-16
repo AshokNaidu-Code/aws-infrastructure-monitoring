@@ -42,10 +42,10 @@ Resources:
                   - ec2:DescribeTags
                   - rds:DescribeDBInstances
                   - rds:ModifyDBInstance
-                  - elbv2:DescribeTargetHealth
-                  - elbv2:DescribeTargetGroups
-                  - elbv2:DeregisterTargets
-                  - elbv2:RegisterTargets
+                  - elasticloadbalancing:DescribeTargetHealth
+                  - elasticloadbalancing:DescribeTargetGroups
+                  - elasticloadbalancing:DeregisterTargets
+                  - elasticloadbalancing:RegisterTargets
                   - cloudwatch:GetMetricData
                   - cloudwatch:PutMetricData
                   - cloudwatch:PutMetricAlarm
