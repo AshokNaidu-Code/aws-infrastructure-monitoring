@@ -3,10 +3,7 @@ name: Deploy Infrastructure Monitoring
 on:
   push:
     branches: [main]
-    paths:
-      - 'cloudformation/**'
-      - 'lambda-functions/**'
-      - 'scripts/**'
+
 
 jobs:
   deploy:
