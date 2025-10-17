@@ -6,10 +6,10 @@
   },
   {
     "ParameterKey": "InstanceType", 
-    "ParameterValue": "t2.micro"
+    "ParameterValue": "t3.micro"
   },
   {
     "ParameterKey": "DBInstanceClass",
-    "ParameterValue": "db.t2.micro"
+    "ParameterValue": "db.t3.micro"
   }
 ]
