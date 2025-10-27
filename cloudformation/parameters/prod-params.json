@@ -6,7 +6,7 @@
   },
   {
     "ParameterKey": "InstanceType", 
-    "ParameterValue": "t3.medium"
+    "ParameterValue": "t3.micro"
   },
   {
     "ParameterKey": "DBInstanceClass",
