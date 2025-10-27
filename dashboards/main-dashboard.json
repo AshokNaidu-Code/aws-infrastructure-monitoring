@@ -1,7 +1,7 @@
 # Dashboard Configuration for Main Infrastructure Monitoring
 # File: dashboards/main-dashboard.json
 
-{
+{  
   "widgets": [
     {
       "type": "metric",
@@ -11,8 +11,8 @@
       "height": 6,
       "properties": {
         "metrics": [
-          [ "AWS/EC2", "CPUUtilization", "InstanceId", "i-WEBSERVER1ID", { "label": "Web Server 1 CPU" } ],
-          [ ".", ".", ".", "i-WEBSERVER2ID", { "label": "Web Server 2 CPU" } ]
+          ["AWS/EC2", "CPUUtilization", "InstanceId", "i-WEBSERVER1ID", {"label": "Web Server 1 CPU"}],
+          [".", ".", ".", "i-WEBSERVER2ID", {"label": "Web Server 2 CPU"}]
         ],
         "view": "timeSeries",
         "stacked": false,
@@ -20,24 +20,7 @@
         "title": "EC2 CPU Utilization",
         "period": 300,
         "yAxis": {
-          "left": {
-            "min": 0,
-            "max": 100
-          }
-        },
-        "annotations": {
-          "horizontal": [
-            {
-              "label": "Critical Threshold",
-              "value": 80,
-              "color": "#d62728"
-            },
-            {
-              "label": "Warning Threshold", 
-              "value": 60,
-              "color": "#ff7f0e"
-            }
-          ]
+          "left": {"min": 0, "max": 100}
         }
       }
     },
@@ -49,34 +32,8 @@
       "height": 6,
       "properties": {
         "metrics": [
-          [ "AWS/EC2", "StatusCheckFailed_Instance", "InstanceId", "i-WEBSERVER1ID", { "label": "Web Server 1 Status" } ],
-          [ ".", ".", ".", "i-WEBSERVER2ID", { "label": "Web Server 2 Status" } ],
-          [ ".", "StatusCheckFailed_System", ".", "i-WEBSERVER1ID", { "label": "System Check 1" } ],
-          [ ".", ".", ".", "i-WEBSERVER2ID", { "label": "System Check 2" } ]
-        ],
-        "view": "timeSeries",
-        "stacked": false,
-        "region": "us-east-1",
-        "title": "EC2 Status Checks",
-        "period": 300,
-        "yAxis": {
-          "left": {
-            "min": 0,
-            "max": 1
-          }
-        }
-      }
-    },
-    {
-      "type": "metric",
-      "x": 0,
-      "y": 6,
-      "width": 12,
-      "height": 6,
-      "properties": {
-        "metrics": [
-          [ "AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "prod-monitoring-db", { "label": "RDS CPU %" } ],
-          [ ".", "DatabaseConnections", ".", ".", { "yAxis": "right", "label": "Active Connections" } ]
+          ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "prod-monitoring-db", {"label": "RDS CPU %"}],
+          [".", "DatabaseConnections", ".", ".", {"yAxis": "right", "label": "Active Connections"}]
         ],
         "view": "timeSeries",
         "stacked": false,
@@ -84,93 +41,37 @@
         "title": "RDS Performance Metrics",
         "period": 300,
         "yAxis": {
-          "left": {
-            "min": 0,
-            "max": 100
-          },
-          "right": {
-            "min": 0
-          }
-        },
-        "annotations": {
-          "horizontal": [
-            {
-              "label": "CPU Critical",
-              "value": 70,
-              "color": "#d62728"
-            }
-          ]
+          "left": {"min": 0, "max": 100},
+          "right": {"min": 0}
         }
       }
     },
     {
       "type": "metric",
-      "x": 12,
+      "x": 0,
       "y": 6,
-      "width": 12,
+      "width": 24,
       "height": 6,
       "properties": {
         "metrics": [
-          [ "AWS/RDS", "FreeStorageSpace", "DBInstanceIdentifier", "prod-monitoring-db", { "label": "Free Storage (Bytes)" } ],
-          [ ".", "FreeableMemory", ".", ".", { "yAxis": "right", "label": "Free Memory (Bytes)" } ]
+          ["AWS/RDS", "FreeStorageSpace", "DBInstanceIdentifier", "prod-monitoring-db", {"label": "Free Storage (Bytes)"}]
         ],
         "view": "timeSeries",
         "stacked": false,
         "region": "us-east-1",
-        "title": "RDS Storage and Memory",
-        "period": 300,
-        "yAxis": {
-          "left": {
-            "min": 0
-          },
-          "right": {
-            "min": 0
-          }
-        }
-      }
-    },
-    
-    {
-      "type": "metric",
-      "x": 12,
-      "y": 18,
-      "width": 12,
-      "height": 6,
-      "properties": {
-        "metrics": [
-          [ "AWS/RDS", "ReadLatency", "DBInstanceIdentifier", "prod-monitoring-db", { "label": "Read Latency" } ],
-          [ ".", "WriteLatency", ".", ".", { "label": "Write Latency" } ]
-        ],
-        "view": "timeSeries",
-        "stacked": false,
-        "region": "us-east-1",
-        "title": "RDS Read/Write Latency",
-        "period": 300,
-        "yAxis": {
-          "left": {
-            "min": 0
-          }
-        },
-        "annotations": {
-          "horizontal": [
-            {
-              "label": "Latency SLA",
-              "value": 0.2,
-              "color": "#d62728"
-            }
-          ]
-        }
+        "title": "RDS Storage",
+        "period": 300
       }
     },
     {
       "type": "number",
       "x": 0,
-      "y": 24,
+      "y": 12,
       "width": 6,
       "height": 3,
       "properties": {
         "metrics": [
-          [ "AWS/EC2", "CPUUtilization", "InstanceId", "i-WEBSERVER1ID" ]
+          ["AWS/EC2", "CPUUtilization", "InstanceId", "i-WEBSERVER1ID"]
         ],
         "view": "singleValue",
         "region": "us-east-1",
@@ -182,12 +83,12 @@
     {
       "type": "number",
       "x": 6,
-      "y": 24,
+      "y": 12,
       "width": 6,
       "height": 3,
       "properties": {
         "metrics": [
-          [ "AWS/EC2", "CPUUtilization", "InstanceId", "i-WEBSERVER2ID" ]
+          ["AWS/EC2", "CPUUtilization", "InstanceId", "i-WEBSERVER2ID"]
         ],
         "view": "singleValue",
         "region": "us-east-1",
@@ -199,32 +100,18 @@
     {
       "type": "number",
       "x": 12,
-      "y": 24,
+      "y": 12,
       "width": 6,
       "height": 3,
       "properties": {
         "metrics": [
-          [ "AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "prod-monitoring-db" ]
+          ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "prod-monitoring-db"]
         ],
         "view": "singleValue",
         "region": "us-east-1",
         "title": "Database Current CPU %",
         "period": 300,
         "stat": "Average"
-      }
-    },
-    
-    {
-      "type": "log",
-      "x": 0,
-      "y": 27,
-      "width": 24,
-      "height": 6,
-      "properties": {
-        "query": "SOURCE '/aws/lambda/infrastructure-incident-response'\n| fields @timestamp, @message\n| filter @message like /INCIDENT_LOG/\n| sort @timestamp desc\n| limit 10",
-        "region": "us-east-1",
-        "title": "Recent Incident Response Actions",
-        "view": "table"
       }
     }
   ]

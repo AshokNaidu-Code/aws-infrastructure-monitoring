@@ -2,6 +2,7 @@
 import json
 import boto3
 import sys
+import argparse
 
 def create_dashboards(environment):
     """Create CloudWatch dashboards from JSON configuration files"""
@@ -17,7 +18,7 @@ def create_dashboards(environment):
         try:
             # Read the dashboard configuration
             with open(dashboard_file, 'r') as f:
-                dashboard_config = json.load(f)  # Parse as JSON object, not string
+                dashboard_config = json.load(f)  # Parse as JSON object
             
             # Extract dashboard name
             dashboard_name = f"{environment}-{dashboard_file.split('/')[-1].replace('-dashboard.json', '')}"
@@ -27,7 +28,7 @@ def create_dashboards(environment):
             # Create the dashboard
             response = client.put_dashboard(
                 DashboardName=dashboard_name,
-                DashboardBody=json.dumps(dashboard_config)  # Convert back to string for API
+                DashboardBody=json.dumps(dashboard_config)
             )
             
             print(f"✓ Dashboard created: {dashboard_name}")
@@ -42,7 +43,10 @@ def create_dashboards(environment):
             sys.exit(1)
 
 if __name__ == '__main__':
-    environment = sys.argv[1] if len(sys.argv) > 1 else 'prod'
-    print(f"Creating dashboards for environment: {environment}")
-    create_dashboards(environment)
+    parser = argparse.ArgumentParser(description='Create CloudWatch dashboards')
+    parser.add_argument('--environment', default='prod', help='Environment name')
+    args = parser.parse_args()
+    
+    print(f"Creating dashboards for environment: {args.environment}")
+    create_dashboards(args.environment)
     print("✓ All dashboards created successfully!")
