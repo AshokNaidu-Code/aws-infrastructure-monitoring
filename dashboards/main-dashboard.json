@@ -1,6 +1,3 @@
-# Dashboard Configuration for Main Infrastructure Monitoring
-# File: dashboards/main-dashboard.json
-
 {  
   "widgets": [
     {
