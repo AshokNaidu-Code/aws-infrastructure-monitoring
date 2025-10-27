@@ -28,4 +28,5 @@ jobs:
           bash scripts/deploy.sh --environment prod --skip-tests
 
       - name: Create Dashboards
-        run: python scripts/create-dashboards.py --environment prod
+        run: echo "Dashboard creation skipped - will be added manually"
+        # run: python scripts/create-dashboards.py --environment prod
