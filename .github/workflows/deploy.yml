@@ -1,8 +1,7 @@
 name: Deploy Infrastructure Monitoring
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch
 
 
 jobs:

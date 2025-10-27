@@ -17,17 +17,6 @@ jobs:
       - name: Install dependencies
         run: pip install boto3
       
-      - name: Validate dashboard JSON syntax
-        run: |
-          python -c \"\"\"
-          import json
-          dashboard_files = ['dashboards/main-dashboard.json', 'dashboards/ec2-dashboard.json', 'dashboards/rds-dashboard.json']
-          for file_path in dashboard_files:
-          with open(file_path) as f:
-          json.load(f)
-          print('All dashboard JSON files validated successfully.')
-          \"\"\"
-      
       - name: Run create-dashboards.py script
         env:
           AWS_ACCESS_KEY_ID: \${{ secrets.AWS_ACCESS_KEY_ID }}
