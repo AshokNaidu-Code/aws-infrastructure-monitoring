@@ -18,14 +18,6 @@ Parameters:
     Type: String
     Description: 'Web Server 2 Instance ID'
   
-  LoadBalancerArn:
-    Type: String
-    Description: 'Application Load Balancer ARN'
-  
-  
-  TargetGroupArn:
-    Type: String
-    Description: 'Target Group ARN'
 
 Resources:
   # SNS Topics for Alerts
@@ -132,62 +124,6 @@ Resources:
         - Name: InstanceId
           Value: !Ref WebServer2Id
 
-  # # ALB CloudWatch Alarms
-  # ALBHighResponseTimeAlarm:
-  #   Type: AWS::CloudWatch::Alarm
-  #   Properties:
-  #     AlarmName: !Sub '${Environment}-ALB-HighResponseTime'
-  #     AlarmDescription: 'ALB response time is above 2 seconds'
-  #     MetricName: TargetResponseTime
-  #     Namespace: AWS/ApplicationELB
-  #     Statistic: Average
-  #     Period: 300
-  #     EvaluationPeriods: 2
-  #     Threshold: 2
-  #     ComparisonOperator: GreaterThanThreshold
-  #     AlarmActions:
-  #       - !Ref WarningAlertsTopic
-  #     Dimensions:
-  #       - Name: LoadBalancer
-  #         Value: !Select [1, !Split ['/', !Select [1, !Split [':', !Ref LoadBalancerArn]]]]
-
-  # ALBHighHTTP5XXAlarm:
-  #   Type: AWS::CloudWatch::Alarm
-  #   Properties:
-  #     AlarmName: !Sub '${Environment}-ALB-High5XX'
-  #     AlarmDescription: 'ALB 5XX errors are above threshold'
-  #     MetricName: HTTPCode_Target_5XX_Count
-  #     Namespace: AWS/ApplicationELB
-  #     Statistic: Sum
-  #     Period: 300
-  #     EvaluationPeriods: 2
-  #     Threshold: 10
-  #     ComparisonOperator: GreaterThanThreshold
-  #     AlarmActions:
-  #       - !Ref CriticalAlertsTopic
-  #     Dimensions:
-  #       - Name: LoadBalancer
-  #         Value: !Select [1, !Split ['/', !Select [1, !Split [':', !Ref LoadBalancerArn]]]]
-
-  # ALBUnhealthyTargetsAlarm:
-  #   Type: AWS::CloudWatch::Alarm
-  #   Properties:
-  #     AlarmName: !Sub '${Environment}-ALB-UnhealthyTargets'
-  #     AlarmDescription: 'ALB has unhealthy targets'
-  #     MetricName: UnHealthyHostCount
-  #     Namespace: AWS/ApplicationELB
-  #     Statistic: Maximum
-  #     Period: 300
-  #     EvaluationPeriods: 1
-  #     Threshold: 0
-  #     ComparisonOperator: GreaterThanThreshold
-  #     AlarmActions:
-  #       - !Ref CriticalAlertsTopic
-  #     Dimensions:
-  #       - Name: TargetGroup
-  #         Value: !Select [1, !Split ['/', !Select [1, !Split [':', !Ref TargetGroupArn]]]]
-  #       - Name: LoadBalancer
-  #         Value: !Select [1, !Split ['/', !Select [1, !Split [':', !Ref LoadBalancerArn]]]]
 
   # RDS CloudWatch Alarms
   RDSHighCPUAlarm:
@@ -336,15 +272,50 @@ Resources:
               "height": 6,
               "properties": {
                 "metrics": [
-                  [ "AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "${Environment}-monitoring-db" ]
+                  [ "AWS/ApplicationELB", "RequestCount", "LoadBalancer", "app/${Environment}-monitoring-alb" ],
+                  [ ".", "TargetResponseTime", ".", "." ]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "ALB Performance"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 6,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [ "AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", "targetgroup/${Environment}-web-targets", "LoadBalancer", "app/${Environment}-monitoring-alb" ],
+                  [ ".", "UnHealthyHostCount", ".", ".", ".", "." ]
                 ],
                 "period": 300,
                 "stat": "Average",
                 "region": "${AWS::Region}",
-                "title": "RDS Performance"
+                "title": "Target Health Status"
               }
             },
-            
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 12,
+              "width": 24,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [ "AWS/ApplicationELB", "HTTPCode_Target_2XX_Count", "LoadBalancer", "app/${Environment}-monitoring-alb" ],
+                  [ ".", "HTTPCode_Target_4XX_Count", ".", "." ],
+                  [ ".", "HTTPCode_Target_5XX_Count", ".", "." ]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "HTTP Response Codes"
+              }
+            }
           ]
         }
 
