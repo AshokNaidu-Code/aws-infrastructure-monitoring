@@ -1,15 +1,11 @@
-# CloudFormation Template: Main Infrastructure Stack
-# File: cloudformation/main-stack.yaml
-
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'AWS Infrastructure Monitoring - Main Stack with EC2, RDS, and ALB'
+Description: 'AWS Infrastructure Monitoring - Main Stack (without ALB)'
 
 Parameters:
   Environment:
     Type: String
     Default: 'prod'
-    AllowedValues: ['dev', 'staging', 'prod']
-    Description: 'Environment name'
+    Description: 'Environment name (dev, staging, prod)'
   
   InstanceType:
     Type: String
@@ -19,10 +15,10 @@ Parameters:
   DBInstanceClass:
     Type: String
     Default: 'db.t3.micro'
-    Description: 'RDS instance class'
+    Description: 'RDS database instance class'
 
 Resources:
-  # VPC and Networking
+  # ==================== VPC and Networking ====================
   VPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -31,7 +27,9 @@ Resources:
       EnableDnsSupport: true
       Tags:
         - Key: Name
-          Value: !Sub '${Environment}-monitoring-vpc'
+          Value: !Sub '${Environment}-vpc'
+        - Key: Environment
+          Value: !Ref Environment
 
   PublicSubnet1:
     Type: AWS::EC2::Subnet
@@ -59,7 +57,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      CidrBlock: '10.0.3.0/24'
+      CidrBlock: '10.0.10.0/24'
       AvailabilityZone: !Select [0, !GetAZs '']
       Tags:
         - Key: Name
@@ -69,13 +67,12 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      CidrBlock: '10.0.4.0/24'
+      CidrBlock: '10.0.11.0/24'
       AvailabilityZone: !Select [1, !GetAZs '']
       Tags:
         - Key: Name
           Value: !Sub '${Environment}-private-subnet-2'
 
-  # Internet Gateway
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
@@ -89,7 +86,6 @@ Resources:
       VpcId: !Ref VPC
       InternetGatewayId: !Ref InternetGateway
 
-  # Route Tables
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -100,7 +96,6 @@ Resources:
 
   PublicRoute:
     Type: AWS::EC2::Route
-    DependsOn: AttachGateway
     Properties:
       RouteTableId: !Ref PublicRouteTable
       DestinationCidrBlock: '0.0.0.0/0'
@@ -118,10 +113,11 @@ Resources:
       SubnetId: !Ref PublicSubnet2
       RouteTableId: !Ref PublicRouteTable
 
-  # Security Groups
+  # ==================== Security Groups ====================
   WebServerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
+      GroupName: !Sub '${Environment}-web-server-sg'
       GroupDescription: 'Security group for web servers'
       VpcId: !Ref VPC
       SecurityGroupIngress:
@@ -136,32 +132,20 @@ Resources:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
-          CidrIp: '10.0.0.0/16'
+          CidrIp: '0.0.0.0/0'
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: '0.0.0.0/0'
       Tags:
         - Key: Name
-          Value: !Sub '${Environment}-web-sg'
+          Value: !Sub '${Environment}-web-server-sg'
+        - Key: Environment
+          Value: !Ref Environment
 
-  # ALBSecurityGroup:
-  #   Type: AWS::EC2::SecurityGroup
-  #   Properties:
-  #     GroupDescription: 'Security group for Application Load Balancer'
-  #     VpcId: !Ref VPC
-  #     SecurityGroupIngress:
-  #       - IpProtocol: tcp
-  #         FromPort: 80
-  #         ToPort: 80
-  #         CidrIp: '0.0.0.0/0'
-  #       - IpProtocol: tcp
-  #         FromPort: 443
-  #         ToPort: 443
-  #         CidrIp: '0.0.0.0/0'
-  #     Tags:
-  #       - Key: Name
-  #         Value: !Sub '${Environment}-alb-sg'
-
-  DatabaseSecurityGroup:
+  DBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
+      GroupName: !Sub '${Environment}-db-sg'
       GroupDescription: 'Security group for RDS database'
       VpcId: !Ref VPC
       SecurityGroupIngress:
@@ -169,115 +153,17 @@ Resources:
           FromPort: 3306
           ToPort: 3306
           SourceSecurityGroupId: !Ref WebServerSecurityGroup
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: '0.0.0.0/0'
       Tags:
         - Key: Name
           Value: !Sub '${Environment}-db-sg'
-
-  # EC2 Instances
-  WebServer1:
-    Type: AWS::EC2::Instance
-    Properties:
-      InstanceType: !Ref InstanceType
-      ImageId: ami-0c02fb55956c7d316  # Amazon Linux 2023
-      SubnetId: !Ref PublicSubnet1
-      SecurityGroupIds:
-        - !Ref WebServerSecurityGroup
-      UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash
-          yum update -y
-          yum install -y httpd
-          systemctl start httpd
-          systemctl enable httpd
-          echo "<h1>Web Server 1 - ${Environment}</h1>" > /var/www/html/index.html
-          
-          # Install CloudWatch agent
-          yum install -y amazon-cloudwatch-agent
-          cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<EOF
-          {
-            "metrics": {
-              "namespace": "CWAgent",
-              "metrics_collected": {
-                "cpu": {
-                  "measurement": ["cpu_usage_idle", "cpu_usage_iowait", "cpu_usage_user", "cpu_usage_system"],
-                  "metrics_collection_interval": 60
-                },
-                "disk": {
-                  "measurement": ["used_percent"],
-                  "metrics_collection_interval": 60,
-                  "resources": ["*"]
-                },
-                "mem": {
-                  "measurement": ["mem_used_percent"],
-                  "metrics_collection_interval": 60
-                }
-              }
-            }
-          }
-          EOF
-          /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
-      IamInstanceProfile: !Ref EC2InstanceProfile
-      Tags:
-        - Key: Name
-          Value: !Sub '${Environment}-web-server-1'
         - Key: Environment
           Value: !Ref Environment
-        - Key: MonitoringEnabled
-          Value: 'true'
 
-  WebServer2:
-    Type: AWS::EC2::Instance
-    Properties:
-      InstanceType: !Ref InstanceType
-      ImageId: ami-0c02fb55956c7d316  # Amazon Linux 2023
-      SubnetId: !Ref PublicSubnet2
-      SecurityGroupIds:
-        - !Ref WebServerSecurityGroup
-      UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash
-          yum update -y
-          yum install -y httpd
-          systemctl start httpd
-          systemctl enable httpd
-          echo "<h1>Web Server 2 - ${Environment}</h1>" > /var/www/html/index.html
-          
-          # Install CloudWatch agent
-          yum install -y amazon-cloudwatch-agent
-          cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<EOF
-          {
-            "metrics": {
-              "namespace": "CWAgent",
-              "metrics_collected": {
-                "cpu": {
-                  "measurement": ["cpu_usage_idle", "cpu_usage_iowait", "cpu_usage_user", "cpu_usage_system"],
-                  "metrics_collection_interval": 60
-                },
-                "disk": {
-                  "measurement": ["used_percent"],
-                  "metrics_collection_interval": 60,
-                  "resources": ["*"]
-                },
-                "mem": {
-                  "measurement": ["mem_used_percent"],
-                  "metrics_collection_interval": 60
-                }
-              }
-            }
-          }
-          EOF
-          /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
-      IamInstanceProfile: !Ref EC2InstanceProfile
-      Tags:
-        - Key: Name
-          Value: !Sub '${Environment}-web-server-2'
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: MonitoringEnabled
-          Value: 'true'
-
-  # IAM Role for EC2 instances
-  EC2Role:
+  # ==================== IAM Roles ====================
+  EC2InstanceRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -290,133 +176,176 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
       Tags:
-        - Key: Name
-          Value: !Sub '${Environment}-ec2-role'
+        - Key: Environment
+          Value: !Ref Environment
 
   EC2InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       Roles:
-        - !Ref EC2Role
+        - !Ref EC2InstanceRole
 
-  # Application Load Balancer
-  # ApplicationLoadBalancer:
-  #   Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-  #   Properties:
-  #     Name: !Sub '${Environment}-monitoring-alb'
-  #     Type: application
-  #     Scheme: internet-facing
-  #     SecurityGroups:
-  #       - !Ref ALBSecurityGroup
-  #     Subnets:
-  #       - !Ref PublicSubnet1
-  #       - !Ref PublicSubnet2
-  #     Tags:
-  #       - Key: Name
-  #         Value: !Sub '${Environment}-alb'
-  #       - Key: Environment
-  #         Value: !Ref Environment
+  # ==================== EC2 Instances ====================
+  WebServer1:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-0c02fb55956c7d316
+      InstanceType: !Ref InstanceType
+      SubnetId: !Ref PublicSubnet1
+      SecurityGroupIds:
+        - !Ref WebServerSecurityGroup
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd
+          systemctl start httpd
+          systemctl enable httpd
+          echo "<h1>Web Server 1 - ${Environment}</h1>" > /var/www/html/index.html
+          
+          # Install CloudWatch agent
+          yum install -y amazon-cloudwatch-agent
+          
+          # Configure and start CloudWatch agent
+          cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<'EOF'
+          {
+            "metrics": {
+              "namespace": "CWAgent",
+              "metrics_collected": {
+                "cpu": {
+                  "measurement": ["cpu_usage_idle", "cpu_usage_iowait", "cpu_usage_user", "cpu_usage_system"],
+                  "metrics_collection_interval": 60
+                },
+                "disk": {
+                  "measurement": ["used_percent"],
+                  "metrics_collection_interval": 60,
+                  "resources": ["*"]
+                },
+                "mem": {
+                  "measurement": ["mem_used_percent"],
+                  "metrics_collection_interval": 60
+                }
+              }
+            }
+          }
+          EOF
+          
+          /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+            -a fetch-config \
+            -m ec2 \
+            -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json \
+            -s
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-web-server-1'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: MonitoringEnabled
+          Value: 'true'
 
-  # ALBTargetGroup:
-  #   Type: AWS::ElasticLoadBalancingV2::TargetGroup
-  #   Properties:
-  #     Name: !Sub '${Environment}-web-targets'
-  #     Port: 80
-  #     Protocol: HTTP
-  #     VpcId: !Ref VPC
-  #     HealthCheckEnabled: true
-  #     HealthCheckIntervalSeconds: 30
-  #     HealthCheckPath: /
-  #     HealthCheckProtocol: HTTP
-  #     HealthCheckTimeoutSeconds: 5
-  #     HealthyThresholdCount: 2
-  #     UnhealthyThresholdCount: 3
-  #     Targets:
-  #       - Id: !Ref WebServer1
-  #         Port: 80
-  #       - Id: !Ref WebServer2
-  #         Port: 80
-  #     Tags:
-  #       - Key: Name
-  #         Value: !Sub '${Environment}-targets'
+  WebServer2:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-0c02fb55956c7d316
+      InstanceType: !Ref InstanceType
+      SubnetId: !Ref PublicSubnet2
+      SecurityGroupIds:
+        - !Ref WebServerSecurityGroup
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd
+          systemctl start httpd
+          systemctl enable httpd
+          echo "<h1>Web Server 2 - ${Environment}</h1>" > /var/www/html/index.html
+          
+          # Install CloudWatch agent
+          yum install -y amazon-cloudwatch-agent
+          
+          # Configure and start CloudWatch agent
+          cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<'EOF'
+          {
+            "metrics": {
+              "namespace": "CWAgent",
+              "metrics_collected": {
+                "cpu": {
+                  "measurement": ["cpu_usage_idle", "cpu_usage_iowait", "cpu_usage_user", "cpu_usage_system"],
+                  "metrics_collection_interval": 60
+                },
+                "disk": {
+                  "measurement": ["used_percent"],
+                  "metrics_collection_interval": 60,
+                  "resources": ["*"]
+                },
+                "mem": {
+                  "measurement": ["mem_used_percent"],
+                  "metrics_collection_interval": 60
+                }
+              }
+            }
+          }
+          EOF
+          
+          /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+            -a fetch-config \
+            -m ec2 \
+            -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json \
+            -s
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-web-server-2'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: MonitoringEnabled
+          Value: 'true'
 
-  # ALBListener:
-  #   Type: AWS::ElasticLoadBalancingV2::Listener
-  #   Properties:
-  #     DefaultActions:
-  #       - Type: forward
-  #         TargetGroupArn: !Ref ALBTargetGroup
-  #     LoadBalancerArn: !Ref ApplicationLoadBalancer
-  #     Port: 80
-  #     Protocol: HTTP
-
-  # RDS Subnet Group
+  # ==================== RDS Database ====================
   DBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
-      DBSubnetGroupName: !Sub '${Environment}-db-subnet-group'
-      DBSubnetGroupDescription: 'Subnet group for RDS database'
+      DBSubnetGroupDescription: !Sub 'Subnet group for ${Environment} RDS'
       SubnetIds:
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
       Tags:
         - Key: Name
           Value: !Sub '${Environment}-db-subnet-group'
+        - Key: Environment
+          Value: !Ref Environment
 
-  # RDS Database
-  Database:
+  RDSDatabase:
     Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
     Properties:
       DBInstanceIdentifier: !Sub '${Environment}-monitoring-db'
       DBInstanceClass: !Ref DBInstanceClass
       Engine: mysql
       EngineVersion: '8.0.43'
-      AllocatedStorage: 20
-      StorageType: gp2
       MasterUsername: admin
-      MasterUserPassword: !Sub '{{resolve:secretsmanager:${Environment}-db-password:SecretString:password}}'
+      MasterUserPassword: 'MonitoringDB123!Admin'
+      AllocatedStorage: '20'
+      StorageType: gp3
       DBSubnetGroupName: !Ref DBSubnetGroup
       VPCSecurityGroups:
-        - !Ref DatabaseSecurityGroup
+        - !Ref DBSecurityGroup
       BackupRetentionPeriod: 7
-      MonitoringInterval: 60
-      MonitoringRoleArn: !GetAtt RDSEnhancedMonitoringRole.Arn
-      EnablePerformanceInsights: true
-      DeletionProtection: false
+      PreferredBackupWindow: '03:00-04:00'
+      PreferredMaintenanceWindow: 'sun:04:00-sun:05:00'
+      EnableCloudwatchLogsExports:
+        - error
+        - general
+      EnableIAMDatabaseAuthentication: false
+      StorageEncrypted: true
       Tags:
         - Key: Name
-          Value: !Sub '${Environment}-database'
+          Value: !Sub '${Environment}-monitoring-db'
         - Key: Environment
           Value: !Ref Environment
 
-  # RDS Enhanced Monitoring Role
-  RDSEnhancedMonitoringRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Sid: ''
-            Effect: Allow
-            Principal:
-              Service: monitoring.rds.amazonaws.com
-            Action: 'sts:AssumeRole'
-      ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole'
-      Path: /
-
-  # Secrets Manager for DB Password
-  DBPasswordSecret:
-    Type: AWS::SecretsManager::Secret
-    Properties:
-      Name: !Sub '${Environment}-db-password'
-      Description: 'Database password for monitoring system'
-      GenerateSecretString:
-        SecretStringTemplate: '{"username": "admin"}'
-        GenerateStringKey: 'password'
-        PasswordLength: 16
-        ExcludeCharacters: '"@/\'
-
+  # ==================== Outputs ====================
 Outputs:
   VPCId:
     Description: 'VPC ID'
@@ -436,26 +365,28 @@ Outputs:
     Export:
       Name: !Sub '${Environment}-web-server-2-id'
 
-  # LoadBalancerArn:
-  #   Description: 'Application Load Balancer ARN'
-  #   Value: !Ref ApplicationLoadBalancer
-  #   Export:
-  #     Name: !Sub '${Environment}-alb-arn'
+  WebServer1PublicIP:
+    Description: 'Web Server 1 Public IP'
+    Value: !GetAtt WebServer1.PublicIp
 
-  # LoadBalancerDNS:
-  #   Description: 'Application Load Balancer DNS Name'
-  #   Value: !GetAtt ApplicationLoadBalancer.DNSName
-  #   Export:
-  #     Name: !Sub '${Environment}-alb-dns'
+  WebServer2PublicIP:
+    Description: 'Web Server 2 Public IP'
+    Value: !GetAtt WebServer2.PublicIp
 
   DatabaseEndpoint:
     Description: 'RDS Database Endpoint'
-    Value: !GetAtt Database.Endpoint.Address
+    Value: !GetAtt RDSDatabase.Endpoint.Address
     Export:
       Name: !Sub '${Environment}-db-endpoint'
 
-  # TargetGroupArn:
-  #   Description: 'Target Group ARN'
-  #   Value: !Ref ALBTargetGroup
-  #   Export:
-  #     Name: !Sub '${Environment}-target-group-arn'
+  DatabasePort:
+    Description: 'RDS Database Port'
+    Value: !GetAtt RDSDatabase.Endpoint.Port
+    Export:
+      Name: !Sub '${Environment}-db-port'
+
+  DBSubnetGroupName:
+    Description: 'DB Subnet Group Name'
+    Value: !Ref DBSubnetGroup
+    Export:
+      Name: !Sub '${Environment}-db-subnet-group'
