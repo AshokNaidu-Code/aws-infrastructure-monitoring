@@ -1,0 +1,39 @@
+name: Create CloudWatch Dashboards
+
+on:
+  workflow_dispatch
+
+jobs:
+  create_dashboards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+      
+      - name: Install dependencies
+        run: pip install boto3
+      
+      - name: Validate dashboard JSON syntax
+        run: |
+          python -c \"\"\"
+          import json
+          dashboard_files = ['dashboards/main-dashboard.json', 'dashboards/ec2-dashboard.json', 'dashboards/rds-dashboard.json']
+          for file_path in dashboard_files:
+          with open(file_path) as f:
+          json.load(f)
+          print('All dashboard JSON files validated successfully.')
+          \"\"\"
+      
+      - name: Run create-dashboards.py script
+        env:
+          AWS_ACCESS_KEY_ID: \${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: \${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
+        run: python scripts/create-dashboards.py --environment prod
+      
+      - name: Dashboards created successfully
+        run: echo "CloudWatch dashboards created successfully!"

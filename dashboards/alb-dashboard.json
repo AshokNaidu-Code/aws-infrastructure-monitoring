@@ -1,5 +1,0 @@
-// {
-//   "widgets": [
-//     { "type": "metric", "properties": { "metrics": [["AWS/ApplicationELB","TargetResponseTime"]], "title": "ALB Target Response Time" } }
-//   ]
-// }
