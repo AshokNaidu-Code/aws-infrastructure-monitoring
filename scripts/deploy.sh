@@ -210,37 +210,64 @@ package_lambda_functions() {
 
 deploy_infrastructure() {
     local s3_bucket=$1
+    local stack_name="aws-monitoring-${ENVIRONMENT}-main"
     
-    log_info "Deploying infrastructure stack..."
+    log_info "Deploying stack: $stack_name"
     
-    # Check if parameter file exists
-    local param_file="cloudformation/parameters/${ENVIRONMENT}-params.json"
-    if [ ! -f "$param_file" ]; then
-        log_warning "Parameter file not found: $param_file"
-        log_info "Creating default parameter file..."
+    # Check if stack exists
+    if aws cloudformation describe-stacks --stack-name $stack_name --region $REGION &> /dev/null; then
+        # Get stack status
+        local stack_status=$(aws cloudformation describe-stacks \
+            --stack-name $stack_name \
+            --region $REGION \
+            --query 'Stacks[0].StackStatus' \
+            --output text)
         
-        # Create parameters directory if it doesn't exist
-        mkdir -p cloudformation/parameters
+        log_info "Stack status: $stack_status"
         
-        # Create default parameters
-        cat > "$param_file" << EOF
-[
-  {
-    "ParameterKey": "Environment",
-    "ParameterValue": "$ENVIRONMENT"
-  },
-  {
-    "ParameterKey": "InstanceType",
-    "ParameterValue": "t3.micro"
-  },
-  {
-    "ParameterKey": "DBInstanceClass",
-    "ParameterValue": "db.t3.micro"
-  }
-]
-EOF
-        log_success "Default parameter file created"
+        # If stack is in failed state, delete it first
+        if [[ "$stack_status" == *"FAILED"* ]] || [[ "$stack_status" == "DELETE_IN_PROGRESS" ]]; then
+            log_warning "Stack is in $stack_status state. Deleting..."
+            aws cloudformation delete-stack --stack-name $stack_name --region $REGION
+            log_info "Waiting for stack deletion..."
+            aws cloudformation wait stack-delete-complete --stack-name $stack_name --region $REGION || true
+            log_success "Stack deleted. Creating new one..."
+            
+            # Create new stack
+            aws cloudformation create-stack \
+                --stack-name $stack_name \
+                --template-body file://cloudformation/main-stack.yaml \
+                --parameters file://$param_file \
+                --capabilities CAPABILITY_IAM \
+                --region $REGION
+        else
+            # Update existing healthy stack
+            log_info "Updating existing stack..."
+            aws cloudformation update-stack \
+                --stack-name $stack_name \
+                --template-body file://cloudformation/main-stack.yaml \
+                --parameters file://$param_file \
+                --capabilities CAPABILITY_IAM \
+                --region $REGION || true
+        fi
+    else
+        log_info "Creating new stack..."
+        aws cloudformation create-stack \
+            --stack-name $stack_name \
+            --template-body file://cloudformation/main-stack.yaml \
+            --parameters file://$param_file \
+            --capabilities CAPABILITY_IAM \
+            --region $REGION
     fi
+    
+    log_info "Waiting for stack creation to complete..."
+    aws cloudformation wait stack-create-complete \
+        --stack-name $stack_name \
+        --region $REGION
+    
+    log_success "Infrastructure stack deployed successfully"
+}
+
     
     # Deploy main infrastructure stack
     local stack_name="aws-monitoring-${ENVIRONMENT}-main"
