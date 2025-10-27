@@ -129,111 +129,7 @@
         }
       }
     },
-    {
-      "type": "metric",
-      "x": 0,
-      "y": 12,
-      "width": 8,
-      "height": 6,
-      "properties": {
-        "metrics": [
-          [ "AWS/ApplicationELB", "RequestCount", "LoadBalancer", "app/prod-monitoring-alb/LBID", { "stat": "Sum", "label": "Total Requests" } ]
-        ],
-        "view": "timeSeries",
-        "stacked": false,
-        "region": "us-east-1",
-        "title": "ALB Request Volume",
-        "period": 300,
-        "yAxis": {
-          "left": {
-            "min": 0
-          }
-        }
-      }
-    },
-    {
-      "type": "metric",
-      "x": 8,
-      "y": 12,
-      "width": 8,
-      "height": 6,
-      "properties": {
-        "metrics": [
-          [ "AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", "app/prod-monitoring-alb/LBID", { "label": "Response Time (seconds)" } ]
-        ],
-        "view": "timeSeries",
-        "stacked": false,
-        "region": "us-east-1",
-        "title": "ALB Response Time",
-        "period": 300,
-        "yAxis": {
-          "left": {
-            "min": 0
-          }
-        },
-        "annotations": {
-          "horizontal": [
-            {
-              "label": "SLA Threshold",
-              "value": 2,
-              "color": "#d62728"
-            },
-            {
-              "label": "Warning",
-              "value": 1.5,
-              "color": "#ff7f0e"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "type": "metric",
-      "x": 16,
-      "y": 12,
-      "width": 8,
-      "height": 6,
-      "properties": {
-        "metrics": [
-          [ "AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", "targetgroup/prod-web-targets/TGID", "LoadBalancer", "app/prod-monitoring-alb/LBID", { "label": "Healthy Targets" } ],
-          [ ".", "UnHealthyHostCount", ".", ".", ".", ".", { "label": "Unhealthy Targets" } ]
-        ],
-        "view": "timeSeries",
-        "stacked": false,
-        "region": "us-east-1",
-        "title": "Target Health Status",
-        "period": 300,
-        "yAxis": {
-          "left": {
-            "min": 0
-          }
-        }
-      }
-    },
-    {
-      "type": "metric",
-      "x": 0,
-      "y": 18,
-      "width": 12,
-      "height": 6,
-      "properties": {
-        "metrics": [
-          [ "AWS/ApplicationELB", "HTTPCode_Target_2XX_Count", "LoadBalancer", "app/prod-monitoring-alb/LBID", { "stat": "Sum", "label": "2XX Responses" } ],
-          [ ".", "HTTPCode_Target_4XX_Count", ".", ".", { "stat": "Sum", "label": "4XX Responses" } ],
-          [ ".", "HTTPCode_Target_5XX_Count", ".", ".", { "stat": "Sum", "label": "5XX Responses" } ]
-        ],
-        "view": "timeSeries",
-        "stacked": false,
-        "region": "us-east-1",
-        "title": "HTTP Response Codes",
-        "period": 300,
-        "yAxis": {
-          "left": {
-            "min": 0
-          }
-        }
-      }
-    },
+    
     {
       "type": "metric",
       "x": 12,
@@ -317,23 +213,7 @@
         "stat": "Average"
       }
     },
-    {
-      "type": "number",
-      "x": 18,
-      "y": 24,
-      "width": 6,
-      "height": 3,
-      "properties": {
-        "metrics": [
-          [ "AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", "targetgroup/prod-web-targets/TGID", "LoadBalancer", "app/prod-monitoring-alb/LBID" ]
-        ],
-        "view": "singleValue",
-        "region": "us-east-1",
-        "title": "Healthy Targets",
-        "period": 300,
-        "stat": "Average"
-      }
-    },
+    
     {
       "type": "log",
       "x": 0,

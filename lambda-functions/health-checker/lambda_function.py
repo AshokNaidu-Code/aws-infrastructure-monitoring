@@ -10,7 +10,7 @@ def lambda_handler(event, context):
     health_results = {
         'ec2_instances': check_ec2_health(),
         'rds_instances': check_rds_health(),
-        'load_balancers': check_alb_health(),
+        # 'load_balancers': check_alb_health(),
         'timestamp': datetime.utcnow().isoformat()
     }
     

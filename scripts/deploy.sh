@@ -302,7 +302,7 @@ deploy_monitoring() {
     # Extract values from stack outputs
     local web_server1_id=$(jq -r '.[] | select(.OutputKey=="WebServer1Id") | .OutputValue' temp/stack-outputs.json)
     local web_server2_id=$(jq -r '.[] | select(.OutputKey=="WebServer2Id") | .OutputValue' temp/stack-outputs.json)
-    local load_balancer_arn=$(jq -r '.[] | select(.OutputKey=="LoadBalancerArn") | .OutputValue' temp/stack-outputs.json)
+    # local load_balancer_arn=$(jq -r '.[] | select(.OutputKey=="LoadBalancerArn") | .OutputValue' temp/stack-outputs.json)
     local database_endpoint=$(jq -r '.[] | select(.OutputKey=="DatabaseEndpoint") | .OutputValue' temp/stack-outputs.json)
     local target_group_arn=$(jq -r '.[] | select(.OutputKey=="TargetGroupArn") | .OutputValue' temp/stack-outputs.json)
     

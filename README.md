@@ -40,14 +40,13 @@ graph TB
     
     subgraph "Monitoring Targets"
         J[EC2 Instances]
-        K[RDS Databases] 
-        L[Application Load Balancer]
+        K[RDS Databases]
     end
     
     subgraph "Response Actions"
-        M[Auto Scaling]
-        N[Service Restart]
-        O[Resource Isolation]
+        L[Auto Scaling]
+        M[Service Restart]
+        N[Resource Isolation]
     end
 ```
 

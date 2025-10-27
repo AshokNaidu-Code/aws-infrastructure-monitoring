@@ -126,8 +126,8 @@ def execute_incident_response(alarm_name, alarm_state, severity, category, messa
             actions_taken.extend(handle_ec2_incident(alarm_name, severity, message))
         elif category == 'RDS':
             actions_taken.extend(handle_rds_incident(alarm_name, severity, message))
-        elif category == 'ALB':
-            actions_taken.extend(handle_alb_incident(alarm_name, severity, message))
+        # elif category == 'ALB':
+        #     actions_taken.extend(handle_alb_incident(alarm_name, severity, message))
         elif category == 'SYSTEM':
             actions_taken.extend(handle_system_incident(alarm_name, severity, message))
         
