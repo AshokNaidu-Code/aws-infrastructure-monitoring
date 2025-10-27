@@ -21,7 +21,11 @@ jobs:
       - name: Validate CloudFormation templates
         run: |
           pip install cfn-lint
-          cfn-lint cloudformation/*.yaml --ignore-checks W1011 W2501 || true
+          cfn-lint cloudformation/*.yaml --ignore-checks W2501 W1011 || exit_code=$?
+          # ignore warning-only exit code (4): treat only non-0/4 as error
+          if [ "$exit_code" -ne 0 ] && [ "$exit_code" -ne 4 ]; then
+          exit $exit_code
+          fi
 
       - name: Deploy Main Stack
         run: |
